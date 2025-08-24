@@ -1,0 +1,40 @@
+- name: Install MongoDB exporter
+  hosts: db
+  become: yes
+  tasks:
+    - name: Download MongoDB exporter
+      get_url:
+        url: https://github.com/percona/mongodb_exporter/releases/download/v0.39.0/mongodb_exporter-0.39.0.linux-amd64.tar.gz
+        dest: /tmp/mongodb_exporter.tar.gz
+
+    - name: Extract MongoDB exporter
+      unarchive:
+        src: /tmp/mongodb_exporter.tar.gz
+        dest: /opt/
+        remote_src: yes
+
+    - name: Create MongoDB exporter service
+      copy:
+        content: |
+          [Unit]
+          Description=MongoDB Exporter
+          After=network.target
+
+          [Service]
+          User=ubuntu
+          Group=ubuntu
+          Type=simple
+          Environment="MONGODB_URI=mongodb://traveluser:travelpass@localhost:27017/travelmemory?authSource=admin"
+          ExecStart=/opt/mongodb_exporter-0.39.0.linux-amd64/mongodb_exporter --web.listen-address=:9216
+          Restart=on-failure
+
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/mongodb-exporter.service
+
+    - name: Reload systemd and start MongoDB exporter
+      systemd:
+        name: mongodb-exporter
+        state: started
+        enabled: yes
+        daemon_reload: yes

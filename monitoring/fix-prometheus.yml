@@ -1,0 +1,34 @@
+- name: Fix Prometheus installation
+  hosts: web
+  become: yes
+  tasks:
+    - name: Create Prometheus data directory
+      file:
+        path: /data
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+
+    - name: Update Prometheus service to use data directory
+      copy:
+        content: |
+          [Unit]
+          Description=Prometheus
+          After=network.target
+
+          [Service]
+          User=ubuntu
+          Group=ubuntu
+          Type=simple
+          ExecStart=/opt/prometheus-2.47.2.linux-amd64/prometheus --config.file=/opt/prometheus/prometheus.yml --web.listen-address=:9090 --storage.tsdb.path=/data
+          Restart=on-failure
+
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/prometheus.service
+
+    - name: Reload systemd and restart Prometheus
+      systemd:
+        name: prometheus
+        state: restarted
+        daemon_reload: yes

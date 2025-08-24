@@ -1,0 +1,26 @@
+- name: Fix Grafana installation
+  hosts: web
+  become: yes
+  tasks:
+    - name: Stop Grafana if running
+      systemd:
+        name: grafana-server
+        state: stopped
+
+    - name: Change Grafana port to 3001
+      lineinfile:
+        path: /etc/grafana/grafana.ini
+        regexp: '^;?http_port = 3000'
+        line: 'http_port = 3001'
+
+    - name: Start Grafana on port 3001
+      systemd:
+        name: grafana-server
+        state: started
+        enabled: yes
+
+    - name: Wait for Grafana to start on port 3001
+      wait_for:
+        port: 3001
+        delay: 10
+        timeout: 60
