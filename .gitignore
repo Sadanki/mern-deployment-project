@@ -1,0 +1,4 @@
+﻿.terraform/
+*.pem
+*.docx
+monitoring/

@@ -1,0 +1,91 @@
+- name: Configure Web Server
+  hosts: web
+  become: yes
+  vars:
+    db_private_ip: "172.31.43.69"
+  
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install curl, git and other dependencies
+      apt:
+        name:
+          - curl
+          - git
+          - build-essential
+        state: present
+
+    - name: Install Node.js 18.x
+      shell: |
+        curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+
+    - name: Verify Node.js installation
+      command: node --version
+      register: node_version
+      changed_when: false
+
+    - name: Display Node.js version
+      debug:
+        msg: "Node.js version: {{ node_version.stdout }}"
+
+    - name: Install PM2 globally
+      npm:
+        name: pm2
+        global: yes
+
+    - name: Clone TravelMemory repo
+      git:
+        repo: https://github.com/Sadanki/TravelMemory_Vignesh
+        dest: /home/ubuntu/travelmemory
+        version: master
+
+    - name: Create .env file for backend
+      copy:
+        content: |
+          PORT=5000
+          MONGODB_URI=mongodb://traveluser:travelpass@{{ db_private_ip }}:27017/travelmemory
+          JWT_SECRET=your_jwt_secret_here_change_this_in_production
+          NODE_ENV=production
+        dest: /home/ubuntu/travelmemory/backend/.env
+
+    - name: Install backend dependencies
+      npm:
+        path: /home/ubuntu/travelmemory/backend
+        state: present
+
+    - name: Install frontend dependencies
+      npm:
+        path: /home/ubuntu/travelmemory/frontend
+        state: present
+
+    - name: Build frontend
+      shell: npm run build
+      args:
+        chdir: /home/ubuntu/travelmemory/frontend
+
+    - name: Start backend with PM2
+      shell: |
+        pm2 start server.js --name "travelmemory-backend"
+        pm2 save
+        pm2 startup
+      args:
+        chdir: /home/ubuntu/travelmemory/backend
+
+    - name: Serve frontend with PM2
+      shell: |
+        pm2 serve build 3000 --name "travelmemory-frontend" --spa
+        pm2 save
+      args:
+        chdir: /home/ubuntu/travelmemory/frontend
+
+    - name: Show PM2 status
+      shell: pm2 status
+      register: pm2_status
+      changed_when: false
+
+    - name: Display PM2 status
+      debug:
+        msg: "{{ pm2_status.stdout }}"
