@@ -6,7 +6,7 @@ A full-stack MERN (MongoDB, Express.js, React, Node.js) application for managing
 
 ## Live Demo
 
-The application is deployed and accessible at: [Your Live Deployment Link Here]
+The application is deployed and accessible at: [http://3.108.56.168:3000/]
 
 ## Features
 
